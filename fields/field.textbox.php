@@ -629,7 +629,7 @@
 			return $value;
 		}
 
-		public function getParameterPoolValue(array $data, $entry_id=NULL){
+		public function getParameterPoolValue(array $data, $entry_id = null){
 			if ($this->get('text_handle') != 'yes') {
 				return $data['value'];
 			}

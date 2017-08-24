@@ -94,7 +94,7 @@
 		 * @param string $previousVersion
 		 * @return boolean
 		 */
-		public function update($previousVersion=false) {
+		public function update($previousVersion = false) {
 			// Column length:
 			if ($this->updateHasColumn('show_full')) {
 				$this->updateRemoveColumn('show_full');
