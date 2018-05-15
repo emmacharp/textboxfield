@@ -52,23 +52,58 @@
 		 * @return boolean
 		 */
 		public function install() {
-			Symphony::Database()->query(sprintf("
-				CREATE TABLE IF NOT EXISTS `%s` (
-					`id` INT(11) UNSIGNED NOT NULL AUTO_INCREMENT,
-					`field_id` INT(11) UNSIGNED NOT NULL,
-					`column_length` INT(11) UNSIGNED DEFAULT 75,
-					`text_size` ENUM('single', 'small', 'medium', 'large', 'huge') DEFAULT 'medium',
-					`text_formatter` VARCHAR(255) DEFAULT NULL,
-					`text_validator` VARCHAR(255) DEFAULT NULL,
-					`text_length` INT(11) UNSIGNED DEFAULT 0,
-					`text_cdata` ENUM('yes', 'no') DEFAULT 'no',
-					`text_handle` ENUM('yes', 'no') DEFAULT 'no',
-					`handle_unique` ENUM('yes', 'no') DEFAULT 'yes',
-					PRIMARY KEY (`id`),
-					KEY `field_id` (`field_id`)
-				) ENGINE=MyISAM DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;",
-				self::FIELD_TABLE
-			));
+			Symphony::Database()
+				->create(self::FIELD_TABLE)
+				->ifNotExists()
+				->fields([
+					'id' => [
+						'type' => 'int(11)',
+						'auto' => true,
+					],
+					'field_id' => 'int(11)',
+					'column_length' => [
+						'type' => 'int(11)',
+						'default' => 75,
+					],
+					'text_size' => [
+						'type' => 'enum',
+						'values' => ['single', 'small', 'medium', 'large', 'huge'],
+						'default' => 'medium',
+					],
+					'text_formatter' => [
+						'type' => 'varchar(255)',
+						'default' => null,
+					],
+					'text_validator' => [
+						'type' => 'varchar(255)',
+						'default' => null,
+					],
+					'text_length' => [
+						'type' => 'int(11)',
+						'default' => 0,
+					],
+					'text_cdata' => [
+						'type' => 'enum',
+						'values' => ['yes', 'no'],
+						'default' => 'no',
+					],
+					'text_handle' => [
+						'type' => 'enum',
+						'values' => ['yes', 'no'],
+						'default' => 'no',
+					],
+					'handle_unique' => [
+						'type' => 'enum',
+						'values' => ['yes', 'no'],
+						'default' => 'yes',
+					],
+				])
+				->keys([
+					'id' => 'primary',
+					'field_id' => 'key',
+				])
+				->execute()
+				->success();
 
 			return true;
 		}
@@ -79,12 +114,7 @@
 		 * @return boolean
 		 */
 		public function uninstall() {
-			Symphony::Database()->query(sprintf(
-				"DROP TABLE `%s`",
-				self::FIELD_TABLE
-			));
-
-			return true;
+			return Symphony::Database()->drop(self::FIELD_TABLE)->ifExists()->execute()->success();
 		}
 
 		/**
@@ -177,16 +207,15 @@
 		 * @return boolean
 		 */
 		public function updateAddIndex($index, $table, $limit = null) {
-			$col = "`{$index}`";
 			if ($limit) {
 				$col .= '(' . General::intval($limit) . ')';
 			}
-			return Symphony::Database()->query("
-				ALTER TABLE
-					`$table`
-				ADD INDEX
-					`{$index}` ($col)
-			");
+
+			return Symphony::Database()
+				->alter($table)
+				->addIndex([$index => $col])
+				->execute()
+				->success();
 		}
 
 		/**
@@ -197,15 +226,12 @@
 		 * @return boolean
 		 */
 		public function updateHasIndex($index, $table) {
-			return (boolean)Symphony::Database()->fetchVar(
-				'Key_name', 0,
-				"
-					SHOW INDEX FROM
-						`$table`
-					WHERE
-						Key_name = '{$index}'
-				"
-			);
+			return (boolean)Symphony::Database()
+				->showIndex()
+				->from($table)
+				->where(['Key_name' => $index])
+				->execute()
+				->variable('Key_name');
 		}
 
 		/**
@@ -235,21 +261,20 @@
 		 */
 		public function updateAddUniqueKey($column, $table = self::FIELD_TABLE) {
 			try {
-				Symphony::Database()->query("
-					ALTER TABLE
-						`$table`
-					DROP KEY
-						`$column`
-				");
+				Symphony::Database()
+					->alter($table)
+					->dropKey($column)
+					->execute()
+					->success();
 			} catch (Exception $ex) {
 				// ignore
 			}
-			return Symphony::Database()->query("
-				ALTER TABLE
-					`$table`
-				ADD UNIQUE KEY
-					`$column` (`$column`)
-			");
+
+			return Symphony::Database()
+				->alter($table)
+				->addKey([$column => 'unique'])
+				->execute()
+				->success();
 		}
 
 		/**
@@ -261,17 +286,17 @@
 		 */
 		public function updateHasUniqueKey($column, $table = self::FIELD_TABLE) {
 			$db = Symphony::Configuration()->get('database', 'db');
-			return (boolean)Symphony::Database()->fetchVar(
-				'CONSTRAINT_NAME', 0,
-				"
-					SELECT DISTINCT CONSTRAINT_NAME
-					FROM information_schema.TABLE_CONSTRAINTS
-					WHERE CONSTRAINT_SCHEMA = '$db' AND
-						CONSTRAINT_NAME = '$column' AND
-						table_name = '$table' AND
-						constraint_type = 'UNIQUE';
-				"
-			);
+
+			return (boolean)Symphony::Database()
+				->select(['CONSTRAINT_NAME'])
+				->distinct()
+				->from(information_schema.TABLE_CONSTRAINTS)
+				->where(['CONSTRAINT_SCHEMA' => $db])
+				->where(['CONSTRAINT_NAME' => $column])
+				->where(['table_name' => $table])
+				->where(['constraint_type' => 'unique'])
+				->execute()
+				->variable('CONSTRAINT_NAME');
 		}
 
 		/**
@@ -282,14 +307,11 @@
 		 * @return boolean
 		 */
 		public function updateAddColumn($column, $type, $table = self::FIELD_TABLE) {
-			return Symphony::Database()->query(sprintf("
-				ALTER TABLE
-					`%s`
-				ADD COLUMN
-					`{$column}` {$type}
-				",
-				$table
-			));
+			return Symphony::Database()
+				->alter($table)
+				->add([$column => $type])
+				->execute()
+				->success();
 		}
 
 		/**
@@ -300,14 +322,11 @@
 		 * @return boolean
 		 */
 		public function updateModifyColumn($column, $type, $table = self::FIELD_TABLE) {
-			return Symphony::Database()->query(sprintf("
-				ALTER TABLE
-					`%s`
-				MODIFY COLUMN
-					`{$column}` {$type}
-				",
-				$table
-			));
+			return Symphony::Database()
+				->alter($table)
+				->modify([$column => $type])
+				->execute()
+				->success();
 		}
 
 		/**
@@ -317,14 +336,12 @@
 		 * @return boolean
 		 */
 		public function updateHasColumn($column, $table = self::FIELD_TABLE) {
-			return (boolean)Symphony::Database()->fetchVar('Field', 0, sprintf("
-					SHOW COLUMNS FROM
-						`%s`
-					WHERE
-						Field = '{$column}'
-				",
-				$table
-			));
+			return (boolean)Symphony::Database()
+				->showColumns()
+				->from($table)
+				->where(['Field' => $column])
+				->execute()
+				->variable('Field');
 		}
 
 		/**
@@ -334,14 +351,11 @@
 		 * @return boolean
 		 */
 		public function updateRemoveColumn($column, $table = self::FIELD_TABLE) {
-			return Symphony::Database()->query(sprintf("
-				ALTER TABLE
-					`%s`
-				DROP COLUMN
-					`{$column}`
-				",
-				$table
-			));
+			return Symphony::Database()
+				->alter($table)
+				->drop($column)
+				->execute()
+				->success();
 		}
 
 		/**
@@ -351,35 +365,34 @@
 		 * @return boolean
 		 */
 		public function updateRenameColumn($from, $to, $table = self::FIELD_TABLE) {
-			$data = Symphony::Database()->fetchRow(0, sprintf("
-					SHOW COLUMNS FROM
-						`%s`
-					WHERE
-						Field = '{$from}'
-				",
-				$table
-			));
+			$data = Symphony::Database()
+				->showColumns()
+				->from($table)
+				->where(['Field' => $from])
+				->execute()
+				->rows();
+
+			$default = null;
+			$null = true;
 
 			if (!is_null($data['Default'])) {
-				$type = 'DEFAULT ' . var_export($data['Default'], true);
+				$default = var_export($data['Default'], true);
+			} else if ($data['Null'] == 'YES') {
+				$null = true;
+			} else {
+				$null = false;
 			}
 
-			else if ($data['Null'] == 'YES') {
-				$type .= 'DEFAULT NULL';
-			}
-
-			else {
-				$type .= 'NOT NULL';
-			}
-
-			return Symphony::Database()->query(sprintf("
-				ALTER TABLE
-					`%s`
-				CHANGE
-					`%s` `%s` %s
-				",
-				$table, $from, $to,
-				$data['Type'] . ' ' . $type
-			));
+			return Symphony::Database()
+				->alter($table)
+				->change($from, [
+					$to => [
+						'type' => $data['Type'],
+						'default' => $default,
+						'null' => $null,
+					]
+				])
+				->execute()
+				->success();
 		}
 	}

@@ -8,6 +8,7 @@
 
 	require_once TOOLKIT . '/class.xsltprocess.php';
 	require_once EXTENSIONS . '/textboxfield/extension.driver.php';
+	require_once EXTENSIONS . '/textboxfield/lib/class.entryquerytextboxadapter.php';
 	require_once FACE . '/interface.exportablefield.php';
 	require_once FACE . '/interface.importablefield.php';
 
@@ -21,6 +22,7 @@
 
 		public function __construct() {
 			parent::__construct();
+			$this->entryQueryFieldAdapter = new EntryQueryTextboxAdapter($this);
 
 			$this->_name = 'Text Box';
 			$this->_required = true;
@@ -31,23 +33,35 @@
 		}
 
 		public function createTable() {
-			$field_id = $this->get('id');
-
-			return Symphony::Database()->query("
-				CREATE TABLE IF NOT EXISTS `tbl_entries_data_{$field_id}` (
-					`id` INT(11) UNSIGNED NOT NULL AUTO_INCREMENT,
-					`entry_id` INT(11) UNSIGNED NOT NULL,
-					`handle` VARCHAR(1024) DEFAULT NULL,
-					`value` TEXT DEFAULT NULL,
-					`value_formatted` TEXT DEFAULT NULL,
-					`word_count` INT(11) UNSIGNED DEFAULT NULL,
-					PRIMARY KEY (`id`),
-					UNIQUE KEY `entry_id` (`entry_id`),
-					INDEX `handle` (`handle`(333)),
-					FULLTEXT KEY `value` (`value`),
-					FULLTEXT KEY `value_formatted` (`value_formatted`)
-				) ENGINE=MyISAM DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
-			");
+			return Symphony::Database()
+				->create('tbl_entries_data_' . General::intval($this->get('id')))
+				->ifNotExists()
+				->fields([
+					'id' => [
+						'type' => 'int(11)',
+						'auto' => true,
+					],
+					'entry_id' => 'int(11)',
+					'handle' => [
+						'type' => 'varchar(1024)',
+						'default' => null,
+					],
+					'value' => 'text',
+					'value_formatted' => 'text',
+					'word_count' => 'int(11)',
+				])
+				->keys([
+					'id' => 'primary',
+					'entry_id' => 'unique',
+					'handle' =>  [
+						'type' => 'index',
+						'cols' => ['handle' => 333],
+					],
+					'value' => 'fulltext',
+					'value_formatted' => 'fulltext',
+				])
+				->execute()
+				->success();
 		}
 
 		public function allowDatasourceOutputGrouping() {
@@ -98,54 +112,40 @@
 		}
 
 		public function getCurrentHandle($entry_id, $lc = null) {
-			return Symphony::Database()->fetchVar('handle', 0, sprintf(
-				"
-					SELECT
-						f.handle
-					FROM
-						`tbl_entries_data_%s` AS f
-					WHERE
-						f.entry_id = '%s'
-					LIMIT 1
-				",
-				$this->get('id'), $entry_id
-			));
+			return Symphony::Database()
+				->select(['f.handle'])
+				->from('tbl_entries_data_' . General::intval($this->get('id'), 'f'))
+				->where(['f.entry_id' => $entry_id])
+				->limit(1)
+				->execute()
+				->variable('handle');
 		}
 
 		public function isHandleLocked($handle, $entry_id, $lc = null) {
-			return (boolean)Symphony::Database()->fetchVar('id', 0, sprintf(
-				"
-					SELECT
-						f.id
-					FROM
-						`tbl_entries_data_%s` AS f
-					WHERE
-						f.handle = '%s'
-						%s
-					LIMIT 1
-				",
-				$this->get('id'), $handle,
-				(!is_null($entry_id) ? "AND f.entry_id != '{$entry_id}'" : '')
-			));
+			$q = Symphony::Database()
+				->select(['f.id'])
+				->from('tbl_entries_data_' . General::intval($this->get('id')), 'f')
+				->where(['f.handle' => $handle])
+				->limit(1);
+
+			$entry_id = General::intval($entry_id);
+			if ($entry_id > -1) {
+				$q->where(['f.entry_id' => $entry_id]);
+			}
+
+			return (boolean)$q->execute()->variable('id');
 		}
 
 		public function isHandleFresh($handle, $value, $entry_id, $lc = null) {
-			return (boolean)Symphony::Database()->fetchVar('id', 0, sprintf(
-				"
-					SELECT
-						f.id
-					FROM
-						`tbl_entries_data_%s` AS f
-					WHERE
-						f.entry_id = '%s'
-						AND f.value = '%s'
-						AND f.handle = '%s'
-					LIMIT 1
-				",
-				$this->get('id'), $entry_id,
-				$this->cleanValue(General::sanitize($value)),
-				$this->cleanValue(General::sanitize($handle))
-			));
+			return Symphony::Database()
+				->select(['f.id'])
+				->from('tbl_entries_data_' . General::intval($this->get('id'), 'f'))
+				->where(['f.entry_id' => $entry_id])
+				->where(['f.value' => $this->cleanValue(General::sanitize($value))])
+				->where(['f.handle' => $this->cleanValue(General::sanitize($handle))])
+				->limit(1)
+				->execute()
+				->variable('id');
 		}
 
 		protected function repairEntities($value) {
@@ -981,10 +981,9 @@
 			}
 		}
 
-        public function buildSortingSelectSQL($sort, $order = 'ASC')
-        {
-            return null;
-        }
+		public function buildSortingSelectSQL($sort, $order = 'ASC') {
+			return null;
+		}
 
 	/*-------------------------------------------------------------------------
 		Grouping:
