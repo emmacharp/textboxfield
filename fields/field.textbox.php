@@ -125,15 +125,14 @@
 			$q = Symphony::Database()
 				->select(['f.id'])
 				->from('tbl_entries_data_' . General::intval($this->get('id')), 'f')
-				->where(['f.handle' => $handle])
-				->limit(1);
+				->where(['f.handle' => $handle]);
 
 			$entry_id = General::intval($entry_id);
 			if ($entry_id > -1) {
 				$q->where(['f.entry_id' => $entry_id]);
 			}
 
-			return (boolean)$q->execute()->variable('id');
+			return (boolean)$q->limit(1)->execute()->variable('id');
 		}
 
 		public function isHandleFresh($handle, $value, $entry_id, $lc = null) {
