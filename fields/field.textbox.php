@@ -114,7 +114,7 @@
 		public function getCurrentHandle($entry_id, $lc = null) {
 			return Symphony::Database()
 				->select(['f.handle'])
-				->from('tbl_entries_data_' . General::intval($this->get('id'), 'f'))
+				->from('tbl_entries_data_' . General::intval($this->get('id')), 'f')
 				->where(['f.entry_id' => $entry_id])
 				->limit(1)
 				->execute()
@@ -138,7 +138,7 @@
 		public function isHandleFresh($handle, $value, $entry_id, $lc = null) {
 			return Symphony::Database()
 				->select(['f.id'])
-				->from('tbl_entries_data_' . General::intval($this->get('id'), 'f'))
+				->from('tbl_entries_data_' . General::intval($this->get('id')), 'f')
 				->where(['f.entry_id' => $entry_id])
 				->where(['f.value' => $this->cleanValue(General::sanitize($value))])
 				->where(['f.handle' => $this->cleanValue(General::sanitize($handle))])
