@@ -72,11 +72,11 @@
 					],
 					'text_formatter' => [
 						'type' => 'varchar(255)',
-						'default' => null,
+						'null' => true,
 					],
 					'text_validator' => [
 						'type' => 'varchar(255)',
-						'default' => null,
+						'null' => true,
 					],
 					'text_length' => [
 						'type' => 'int(11)',

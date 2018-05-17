@@ -44,7 +44,7 @@
 					'entry_id' => 'int(11)',
 					'handle' => [
 						'type' => 'varchar(1024)',
-						'default' => null,
+						'null' => true,
 					],
 					'value' => 'text',
 					'value_formatted' => 'text',
