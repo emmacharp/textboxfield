@@ -114,7 +114,11 @@
 		 * @return boolean
 		 */
 		public function uninstall() {
-			return Symphony::Database()->drop(self::FIELD_TABLE)->ifExists()->execute()->success();
+			return Symphony::Database()
+				->drop(self::FIELD_TABLE)
+				->ifExists()
+				->execute()
+				->success();
 		}
 
 		/**
