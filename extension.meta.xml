@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <extension id="textboxfield" status="released" xmlns="http://getsymphony.com/schemas/extension/1.0">
-	<name>Text Box</name>
+	<name>Field: Text Box</name>
 	<description>The Text Box field is a replacement for both the standard text input and textarea fields. It combines both to create a field that supports text formatting and validation rules.</description>
 	<repo type="github">https://github.com/symphonists/textboxfield</repo>
 	<url type="discuss">https://www.getsymphony.com/discuss/thread/387/</url>
