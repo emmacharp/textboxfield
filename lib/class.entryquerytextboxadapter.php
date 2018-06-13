@@ -40,19 +40,21 @@ class EntryQueryTextboxAdapter extends EntryQueryFieldAdapter
     public function createFilterContains($filter, array $columns)
     {
         $field_id = General::intval($this->field->get('id'));
-        $filter = $this->field->cleanValue($filter);
         $matches = [];
         preg_match('/^(not-)?((starts|ends)-with|contains):\s*/', $filter, $matches);
-        $op = empty($matches[1]) ? 'not like' : 'like';
+        $op = empty($matches[1]) ? 'like' : 'not like';
+
+        $filter = trim(array_pop(explode(':', $filter, 2)));
+        $filter = $this->field->cleanValue($filter);
 
         if ($matches[2] == 'ends-with') {
-            $filter = "%{$filter}";
+            $filter = '%' . $filter;
         }
         if ($matches[2] == 'starts-with') {
-            $filter = "{$filter}%";
+            $filter = $filter . '%';
         }
         if ($matches[2] == 'contains') {
-            $filter = "%{$filter}%";
+            $filter = '%' . $filter . '%';
         }
 
         $conditions = [];
