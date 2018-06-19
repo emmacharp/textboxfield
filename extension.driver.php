@@ -135,7 +135,7 @@
 			}
 
 			if (!$this->updateHasColumn('column_length')) {
-				$this->updateAddColumn('column_length', 'INT(11) UNSIGNED DEFAULT 75 AFTER `field_id`');
+				$this->updateAddColumn('column_length', ['type' => 'int(11)', 'default' => 75], self::FIELD_TABLE, 'field_id');
 			}
 
 			// Text size:
@@ -159,26 +159,32 @@
 			}
 
 			else if (!$this->updateHasColumn('text_length')) {
-				$this->updateAddColumn('text_length', 'INT(11) UNSIGNED DEFAULT 0 AFTER `text_formatter`');
+				$this->updateAddColumn('text_length', ['type' => 'int(11)', 'default' => 0], self::FIELD_TABLE, 'text_formatter');
 			}
 
 			// Text CDATA:
 			if (!$this->updateHasColumn('text_cdata')) {
-				$this->updateAddColumn('text_cdata', "ENUM('yes', 'no') DEFAULT 'no' AFTER `text_length`");
+				$this->updateAddColumn('text_cdata', ['type' => 'enum', 'values' => ['yes', 'no'], 'default' => 'no'], self::FIELD_TABLE, 'text_length');
 			}
 
 			// Text handle:
 			if (!$this->updateHasColumn('text_handle')) {
-				$this->updateAddColumn('text_handle', "ENUM('yes', 'no') DEFAULT 'no' AFTER `text_cdata`");
+				$this->updateAddColumn('text_handle', ['type' => 'enum', 'values' => ['yes', 'no'], 'default' => 'no'], self::FIELD_TABLE, 'text_cdata');
 			}
 
 			// is handle unique:
 			if (!$this->updateHasColumn('handle_unique')) {
-				$this->updateAddColumn('handle_unique', "ENUM('yes', 'no') NOT NULL DEFAULT 'yes' AFTER `text_handle`");
+				$this->updateAddColumn('handle_unique', ['type' => 'enum', 'values' => ['yes', 'no'], 'default' => 'yes'], self::FIELD_TABLE, 'text_handle');
 			}
 
 			// Add handle index to textbox entry tables:
-			$textbox_fields = FieldManager::fetch(null, null, 'ASC', 'sortorder', 'textbox');
+			$textbox_fields = (new FieldManager)
+				->select()
+				->sort('sortorder', 'asc')
+				->type('textbox')
+				->execute()
+				->rows();
+
 			foreach($textbox_fields as $field) {
 				$table = "tbl_entries_data_" . $field->get('id');
 
@@ -192,7 +198,7 @@
 				if ($this->updateHasColumn('text_handle') && !$this->updateHasIndex('handle', $table)) {
 					$this->updateAddIndex('handle', $table, 333);
 				}
-				
+
 				// Make sure we have a unique key on `entry_id`
 				if ($this->updateHasColumn('entry_id', $table) && !$this->updateHasUniqueKey('entry_id', $table)) {
 					$this->updateAddUniqueKey('entry_id', $table);
@@ -294,7 +300,7 @@
 			return (boolean)Symphony::Database()
 				->select(['CONSTRAINT_NAME'])
 				->distinct()
-				->from(information_schema.TABLE_CONSTRAINTS)
+				->from('information_schema.TABLE_CONSTRAINTS')
 				->where(['CONSTRAINT_SCHEMA' => $db])
 				->where(['CONSTRAINT_NAME' => $column])
 				->where(['table_name' => $table])
@@ -310,10 +316,16 @@
 		 * @param string $type
 		 * @return boolean
 		 */
-		public function updateAddColumn($column, $type, $table = self::FIELD_TABLE) {
-			return Symphony::Database()
+		public function updateAddColumn($column, $type, $table = self::FIELD_TABLE, $after = '') {
+			$q = Symphony::Database()
 				->alter($table)
-				->add([$column => $type])
+				->add([$column => $type]);
+
+			if (strlen($after) > 0) {
+				$q->after($after);
+			}
+
+			return $q
 				->execute()
 				->success();
 		}
