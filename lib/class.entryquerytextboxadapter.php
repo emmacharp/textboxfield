@@ -69,20 +69,22 @@ class EntryQueryTextboxAdapter extends EntryQueryFieldAdapter
 
     public function isFilterHandle($filter)
     {
-        return preg_match('/^(not-)?handle:\s*/', $filter);
+        return preg_match('/^(not-)?handle: ?\s*/', $filter);
     }
 
     public function createFilterHandle($filter, array $columns)
     {
         $field_id = General::intval($this->field->get('id'));
-        $filter = $this->field->cleanValue($filter);
         $matches = [];
-        preg_match('/^(not-)?handle:\s*/', $filter, $matches);
+        preg_match('/^(not-)?handle: ?\s*/', $filter, $matches);
         $op = ($matches[1] == '' ? '=' : '!=');
+
+        $filter = trim(array_pop(explode(':', $filter, 2)));
+        $filter = $this->field->cleanValue($filter);
 
         $conditions = [];
         foreach ($columns as $key => $col) {
-            $conditions[] = [$this->formatColumn($col, $field_id) => str_replace($matches[0], '', $filter)];
+            $conditions[] = [$this->formatColumn($col, $field_id) => $filter];
         }
         // var_dump($conditions);
         if (count($conditions) < 2) {
