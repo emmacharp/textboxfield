@@ -82,8 +82,9 @@ class EntryQueryTextboxAdapter extends EntryQueryFieldAdapter
 
         $conditions = [];
         foreach ($columns as $key => $col) {
-            $conditions[] = [$this->formatColumn($col, $field_id) => [$op => $filter]];
+            $conditions[] = [$this->formatColumn($col, $field_id) => str_replace($matches[0], '', $filter)];
         }
+        // var_dump($conditions);
         if (count($conditions) < 2) {
             return $conditions;
         }
@@ -109,11 +110,16 @@ class EntryQueryTextboxAdapter extends EntryQueryFieldAdapter
         } elseif ($this->isFilterBoolean($filter)) {
             return $this->createFilterBoolean($filter, $this->getFilterColumns());
         } elseif ($this->isFilterContains($filter)) {
-            return $this->createFilterContains($filter, ['value', 'handle']);
+            return $this->createFilterContains($filter, $this->getFilterColumns());
         } elseif ($this->isFilterHandle($filter)) {
-            return $this->createFilterHandle($filter, ['handle']);
+            return $this->createFilterHandle($filter, $this->getFilterColumns());
         }
-        return $this->createFilterEquality($filter, ['value', 'handle']);
+        return $this->createFilterEquality($filter, $this->getFilterColumns());
+    }
+
+    public function getFilterColumns()
+    {
+        return ['value', 'handle'];
     }
 
     public function getSortColumns()
