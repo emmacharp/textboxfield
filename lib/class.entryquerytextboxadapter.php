@@ -110,7 +110,7 @@ class EntryQueryTextboxAdapter extends EntryQueryFieldAdapter
         } elseif ($this->isFilterSQL($filter)) {
             return $this->createFilterSQL($filter, $this->getFilterColumns());
         } elseif ($this->isFilterBoolean($filter)) {
-            return $this->createFilterBoolean($filter, $this->getFilterColumns());
+            return $this->createFilterBoolean($filter, $this->getBooleanFilterColumns());
         } elseif ($this->isFilterContains($filter)) {
             return $this->createFilterContains($filter, $this->getFilterColumns());
         } elseif ($this->isFilterHandle($filter)) {
@@ -122,6 +122,11 @@ class EntryQueryTextboxAdapter extends EntryQueryFieldAdapter
     public function getHandleFilterColumns()
     {
         return ['handle'];
+    }
+
+    public function getBooleanFilterColumns()
+    {
+        return ['value'];
     }
 
     public function getFilterColumns()
