@@ -447,13 +447,12 @@
 
 			if (is_null($label)) return;
 
-			$label->appendChild($input);
-
 			if ($flagWithError != null) {
 				$label = Widget::Error($label, $flagWithError);
 			}
 
 			$wrapper->appendChild($label);
+			$wrapper->appendChild($input);
 		}
 
 	/*-------------------------------------------------------------------------
